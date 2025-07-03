@@ -65,3 +65,5 @@ app.post('/api/paytm/webhook',async (req,res) => {
     }
 })
 app.listen(3003,() => {console.log("Paytm-webhook running !")})
+
+export default app;
