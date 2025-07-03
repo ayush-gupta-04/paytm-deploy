@@ -35,3 +35,5 @@ app.get('/' , (req,res) => {
     })
 })
 app.listen(3002,() => {console.log("Bank Backend Started")})
+
+export default app;
