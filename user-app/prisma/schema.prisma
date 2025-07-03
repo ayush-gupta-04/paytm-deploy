@@ -1,0 +1,113 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+//don't store dob as a Datetime.
+//it will take a lot of effort
+model User {
+  id                 String     @id @default(uuid())
+  firstname          String
+  lastname           String?
+  email              String     @unique
+  password           String?
+  phone              String?     @unique
+  isEmailVerified    Boolean    @default(false)
+  upi                String?     @unique
+  dob                String?
+  gender             Gender?
+  tpin               String?    
+  address            address[]
+  balance            Balance[]
+  onRampTransaction  OnRampTransaction[]
+  sentTransfer       p2pTransfer[]     @relation(name: "FromUser")
+  receivedTransfer       p2pTransfer[]     @relation(name: "toUser")
+  emailOtpVerification    emailOtpVerification[]
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+model address{
+  id                   String     @id   @default(uuid())
+  userId               String     @unique
+  user                 User      @relation(fields: [userId],references: [id])
+  address            String?
+  city               String?
+  pincode            String?
+  country            String?
+}
+
+model emailOtpVerification{
+  id                  String    @id   @default(uuid())
+  userId              String
+  user                User      @relation(fields: [userId],references: [id])
+  token               String    @unique
+  otp                 String
+  otpExpiry           String
+  isVerified          Boolean    @default(false)
+}
+
+model p2pTransfer {
+  id                 String      @id @default(uuid())
+  amount             Int
+  timestamp          DateTime
+  fromUserPhone      String?
+  fromUserUpi        String?
+  fromUserId         String
+  fromUser           User      @relation(name: "FromUser",fields: [fromUserId],references: [id])
+  toUserId           String
+  toUser             User      @relation(name: "toUser",fields: [toUserId],references: [id])
+  toUserPhone        String?
+  toUserUpi          String?
+}
+
+model Balance {
+  id         String  @id  @default(uuid())
+  amount     Int
+  locked     Int
+  userId     String  @unique
+  user       User    @relation(fields: [userId],references: [id])
+}
+
+
+model   OnRampTransaction{
+  id            String   @id  @default(uuid())
+  status        OnRampStatus
+  token         String   @unique
+  provider      String
+  amount        Int
+  startTime     DateTime
+  userId        String
+  user          User     @relation(fields: [userId],references: [id])
+}
+
+enum  OnRampStatus {
+  success
+  faliure
+  processing
+}
+
+
+model HdfcBankTnx{
+  id            String   @id  @default(uuid())
+  token         String   @unique
+  amount        Int
+  webhookUrl    String
+  userId        String
+  tokenExpiry   String
+}

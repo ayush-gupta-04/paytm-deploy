@@ -1,0 +1,160 @@
+Q1. why we are making db in another folder (packages) ??? why not in user-app itself ???
+--> To make it available to another frontend which might come in future.
+
+
+
+---------------------- Boot straping the DB -------------------------
+
+1. Adding Tailwind to app.
+    --> Choose the NextJs framework.
+    --> Install the tailwind in apps\user-app.
+    --> Never install in the root folder.
+    --> It will install --> postcss.config.js
+                        --> tailwind.config.js
+    --> tailwind , postcss will be added as a dependency in package.json in apps\user-app's package.json
+    --> Make sure that tailwind and postcss is added as a dev dependencies in the package.json.
+    --> update global.css
+    --> update tailwind.config.js .... add   ( "../../packages/ui/src/**/*.{js,ts,jsx,tsx,mdx}" ) in contents.
+    --> we are not importing or exporting anything from apps\user-app right now 
+        so we don't need to do ( npm install ) globally or anything like that.
+
+2.  npm init -y 
+    When initialising a package.json --> 
+        --> a. update it's name to '@repo/anything'
+        --> b. initialise typescript.
+               When typescript is initialised --> 
+               --> c. update tsconfig.json content .... extend to base.json .....see tsconfig.json of another file.
+        --> c. Update the script of package.json
+                "scripts": {
+                    "build": "npx esbuild ./src/index.ts --bundle --platform=node --outfile=dist/index.js",
+                    "start": "node dist/index.js",
+                    "dev": "npm run build && npm run start"
+                }
+
+3. Adding prisma -->
+    --> a. Install prisma in ( packages\db ) folder.....not in root folder.....Make sure it is installed successfully.
+               --> Make Sure the app is not running at that time.
+    --> b. Initialise Prisma .... " npx prisma init "
+               --> Make Sure the app is not running at that time.
+    --> b. Set up DATABASE_URL, Model.
+    --> c. Migrate the Database..... " npx prisma migrate dev "
+               --> Make Sure the app is not running at that time.
+    --> d. Generate prisma client .... " npx prisma generate "
+	       --> Make Sure the app is not running at that time.
+
+    --> b. If you initialise prisma client .. then prisma client will be installed in the root node module.
+           If you want to import prisma client from this db folder to any other folder.....you can do this.
+                1. make an index.ts file.
+                2. Export index.ts from package.json(of db) ... "exports" : {    "./client" : "./src/index.ts"   }.
+                3. Add "@repo/db" as a dependency in the folder where you want to use db....in this case ... user-app
+                4. run npm install in root folder.
+                5. index.ts file must export the singleton prisma client.
+4. recoil
+5. next-auth
+	--> a. Install next-auth in the user-app folder.	
+	--> b. Make a file Providers.tsx in the root of user-app in the app directory.
+	--> c. Inside providers ... wrap the children inside "SessionProviders"...make it a client component.
+	--> d. Wrap the root layout.tsx inside "Providers".
+	--> e. inside api/auth/[...nextauth] , make route.ts
+	--> f. inside route.ts file export the Next_auth_options (which is imported from lib/auth.ts)
+	--> g. Inside lib/auth.ts define providers.
+	--> h. Imp to note.
+	        --> a. signIn() is a client component ... so it will not be accessible through server actions.
+		--> b. To provide a session to the user we must enter through the signIn().
+		What problem I faced ??
+		--> a. 
+
+How export import works ???
+--> Any tool (react, next-auth, zod, prisma) is/will be installed in the root node module.
+--> The folder schema, store will have a index.ts file which exports something.
+--> The folder's package.json will have an field (exports) ... it specifies the path of the folder which it exports.
+--> Then we have to update the NextJs folder's package.json .... the schema, db folder will be as a dependency in NextJs folder's package.json.
+--> run npm install in the root folder to download all the dependency.
+
+
+
+DOUBTS ----> 
+1. If we add google auth ... then through google auth th euser will be directly redirected to the main app without entering into our database.
+   How do we resolve this issue??
+2. 
+
+
+
+PROBLEMS : 
+1. I wanted AppbarClient for (dashboard,transfer,transaction,landingpage) but not for this (signin,signup,emailverify,forgotpass).
+   when i applied AppbarClient in root layout ... ye appbar sbme aa gya.
+   SOLUTION --> 
+       --> AppbarClient in layout of (dashboard) --> so i got AppbarClient for (dashboard,transfer,transaction,landingpage).
+       --> Wrap LandingPage in RootLayout function and uske ander AppbarClient daal do.
+
+2. I wanted ki on clicking signOut button , i get redirected to the landing page.
+   but when i did router.push .. control didn't reach there.
+   SOLUTION --> 
+       --> signOut() .. it contains a callback url.. so on signout we will be redirected to the callbackurl.
+       --> default callback is from where we invked the signout function.
+
+3. I wated to redirect the user to a new tab -->
+   router only redirects to the same tab.
+   window.open("url.com","_blank") --> will open in the new tab
+
+
+4. How data should be Fetched on opening a page. ??
+    All explanation --> refer to apps/user-app/(dashboard)/settings/page.tsx     OR      components/address.tsx
+    --> If the page be populate with personal data then data should be fetched on the server and pass down to Different components.
+    --> 1. Main page (eg. settings page) should be a server component.
+    --> 2. ChildComponent (who wants to show the data eg. address component) must be a client component.
+
+5. Why child be a client component  ??
+    --> 1. because , when the server data comes to the child then i want the child to update its atoms for efficient state management...by using useeffects.
+    -->    PITFALL --> and state must be changed only if atom was null.
+                       why ??
+                       for 10-15 secs the page don't reloads (it has the old data).
+                       So if i comeback on this page beore 10 secs .. since this profile component was using the server loaded data(which is now old).
+                       My state would update (as useEffect will trigger with state data) and state will be set to old data.
+                       So it's very imp that we don't set the state in useEffect if atom was not null.
+                       null atom --> Hard reloads make the atom null.
+                                 --> First time visit a page.
+    --> 2. When we change a data in a form ... if it succeeds it must change the atoms...so that the profile is sync with the state.
+
+
+6. If in a form to edit address.
+    If i want --> 1. LATEST Saved values appears.
+              --> 2. As i set new values and save changes then it must update the state.
+   make sure.
+   --> 1. If i close the form , Values must reset to default..or just reset().
+   --> 2. The default values must be a state an atom...make sure that the defaults are latest saved ones.
+   --> 3. The default address is only set once (on the time of opening a page) after that even if the state changes the default values will remain the same...in UseForm.
+   -->    Sol --> useEffect will have reset(values of latest state) and will trigger whenever state changes.
+   --> 4. On saving the changes the state must be updated.
+
+
+7. In the pop-up transition.
+   --> What i wanted --> when i click a button a popup appears with a full screen transparent div behind it.
+   --> Why transparent div ?? --> because i don't want the user to click another item on page when a menu is open...if he clicks the bg div will automatically close the menu.
+   --> How i achieved --> 
+       --> <BackgroundSupported/> --> with props --> w-screen z-10 fixed top-1/2 left-1/2 transition-all -translate-x-1/2 -translate-y-1/2 h-full duration-300 ${hide?"opacity-0 pointer-events-none":"opacity-100 backdrop-brightness-50"}
+       --> <Popup/> --> with props --> w-1/3 fixed z-20 top-1/2 left-1/2 transition-all -translate-x-1/2 -translate-y-1/2 rounded-lg duration-300 ${hide?"scale-90 opacity-0 pointer-events-none":"scale-100 opacity-100"}
+   --> If i want to dim the brightness of underlying div --> backdrop-brightness
+   --> If i want that if a div is present then onClicking it nothing should happen --> pointer-events-none
+
+8. No transition in conditional rendering.
+
+
+9. If from a server component you pass a value to a client compoenent which can possibly be null...then it will throw error.
+   To resolve it :-   const upi = await getUpi();  // upi : string | null
+                      const safeUpi = {
+                        initialUpi : upi
+                      }
+                      Now pass this safeUpi to the client component.
+
+
+
+10. Never do this --> 
+    try{
+        //do something
+    }catch(err){
+        return{
+            success : false,
+            message : err               //this err can be an object and since message accepts a string .. it will definetly throw an error.
+        }
+    }

@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Balance {
+  id     String @id
+  amount Int
+  locked Int
+  userId String @unique
+  User   User   @relation(fields: [userId], references: [id])
+}
+
+model HdfcBankTnx {
+  id          String @id
+  token       String @unique
+  amount      Int
+  webhookUrl  String
+  userId      String
+  tokenExpiry String
+}
+
+model OnRampTransaction {
+  id        String       @id
+  status    OnRampStatus
+  token     String       @unique
+  provider  String
+  amount    Int
+  startTime DateTime
+  userId    String
+  User      User         @relation(fields: [userId], references: [id])
+}
+
+model User {
+  id                                       String                 @id
+  firstname                                String
+  lastname                                 String?
+  email                                    String                 @unique
+  password                                 String?
+  phone                                    String?                @unique
+  isEmailVerified                          Boolean                @default(false)
+  upi                                      String?                @unique
+  dob                                      String?
+  gender                                   Gender?
+  tpin                                     String?
+  Balance                                  Balance?
+  OnRampTransaction                        OnRampTransaction[]
+  address                                  address?
+  emailOtpVerification                     emailOtpVerification[]
+  p2pTransfer_p2pTransfer_fromUserIdToUser p2pTransfer[]          @relation("p2pTransfer_fromUserIdToUser")
+  p2pTransfer_p2pTransfer_toUserIdToUser   p2pTransfer[]          @relation("p2pTransfer_toUserIdToUser")
+}
+
+model address {
+  id      String  @id
+  userId  String  @unique
+  address String?
+  city    String?
+  pincode String?
+  country String?
+  User    User    @relation(fields: [userId], references: [id])
+}
+
+model emailOtpVerification {
+  id         String  @id
+  userId     String
+  token      String  @unique
+  otp        String
+  otpExpiry  String
+  isVerified Boolean @default(false)
+  User       User    @relation(fields: [userId], references: [id])
+}
+
+model p2pTransfer {
+  id                                String   @id
+  amount                            Int
+  timestamp                         DateTime
+  fromUserId                        String
+  toUserId                          String
+  fromUserPhone                     String?
+  fromUserUpi                       String?
+  toUserPhone                       String?
+  toUserUpi                         String?
+  User_p2pTransfer_fromUserIdToUser User     @relation("p2pTransfer_fromUserIdToUser", fields: [fromUserId], references: [id])
+  User_p2pTransfer_toUserIdToUser   User     @relation("p2pTransfer_toUserIdToUser", fields: [toUserId], references: [id])
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum OnRampStatus {
+  success
+  faliure
+  processing
+}
