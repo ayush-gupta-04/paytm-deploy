@@ -1,5 +1,5 @@
 'use server'
-import  prisma  from "@paytm-repo/db/client";
+import  prisma  from "../../lib/db";
 import { sendMail } from "../../lib/gmail";
 
 export async function resendOTPForEmailVerification({otpToken} : {otpToken : string}){
